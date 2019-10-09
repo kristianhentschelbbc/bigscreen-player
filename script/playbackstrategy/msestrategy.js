@@ -255,6 +255,8 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         mediaPlayer.setBufferTimeAtTopQuality(12);
         mediaPlayer.setBufferTimeAtTopQualityLongForm(12);
 
+        mediaPlayer.setFragmentRequestTimeout(3300);
+
         mediaPlayer.initialize(mediaElement, null, true);
         modifySource(playbackTime);
       }
