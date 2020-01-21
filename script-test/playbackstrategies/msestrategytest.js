@@ -4,9 +4,10 @@ require(
     'bigscreenplayer/models/mediakinds',
     'bigscreenplayer/models/windowtypes',
     'bigscreenplayer/mediasources',
-    'bigscreenplayer/models/livesupport'
+    'bigscreenplayer/models/livesupport',
+    'bigscreenplayer/playbackstrategy/growingwindowrefresher'
   ],
-  function (Squire, MediaKinds, WindowTypes, MediaSources, LiveSupport) {
+  function (Squire, MediaKinds, WindowTypes, MediaSources, LiveSupport, GrowingWindowRefresher) {
     var injector = new Squire();
     var MSEStrategy;
     var mseStrategy;
@@ -16,6 +17,7 @@ require(
     var playbackElement;
     var cdnArray = [];
     var mediaSources;
+    var mediaSourcesTimeSpy;
 
     var mockDashjs;
     var mockDashInstance;
@@ -26,7 +28,9 @@ require(
     var mockDynamicWindowUtils;
     var mockAudioElement = document.createElement('audio');
     var mockVideoElement = document.createElement('video');
+    var mockRefresher;
     var testManifestObject;
+    var timeUtilsMock;
 
     var dashjsMediaPlayerEvents = {
       ERROR: 'error',
@@ -48,7 +52,7 @@ require(
         mockDashInstance = jasmine.createSpyObj('mockDashInstance',
           ['initialize', 'retrieveManifest', 'getDebug', 'getSource', 'on', 'off', 'time', 'duration', 'attachSource',
             'reset', 'isPaused', 'pause', 'play', 'seek', 'isReady', 'refreshManifest', 'getDashMetrics', 'getMetricsFor', 'setBufferToKeep',
-            'setBufferAheadToKeep', 'setBufferTimeAtTopQuality', 'setBufferTimeAtTopQualityLongForm', 'getBitrateInfoListFor', 'getAverageThroughput', 'setFragmentRequestTimeout']);
+            'setBufferAheadToKeep', 'setBufferTimeAtTopQuality', 'setBufferTimeAtTopQualityLongForm', 'getBitrateInfoListFor', 'getAverageThroughput', 'getDVRWindowSize', 'setLiveDelay']);
         mockPluginsInterface = jasmine.createSpyObj('interface', ['onErrorCleared', 'onBuffering', 'onBufferingCleared', 'onError', 'onFatalError', 'onErrorHandled', 'onPlayerInfoUpdated']);
         mockPlugins = {
           interface: mockPluginsInterface
@@ -58,12 +62,22 @@ require(
         spyOn(mockVideoElement, 'addEventListener');
         spyOn(mockVideoElement, 'removeEventListener');
 
+        mockRefresher = {
+          GrowingWindowRefresher: GrowingWindowRefresher
+        };
+        spyOn(mockRefresher, 'GrowingWindowRefresher').and.callThrough();
+
         mockVideoElement.addEventListener.and.callFake(function (eventType, handler) {
           eventHandlers[eventType] = handler;
 
           eventCallbacks = function (event) {
             eventHandlers[event].call(event);
           };
+        });
+
+        timeUtilsMock = jasmine.createSpyObj('timeUtilsMock', ['calculateSlidingWindowSeekOffset']);
+        timeUtilsMock.calculateSlidingWindowSeekOffset.and.callFake(function (time) {
+          return time;
         });
 
         mockDashjs.MediaPlayer.and.returnValue(mockDashMediaPlayer);
@@ -74,6 +88,7 @@ require(
         mockDashInstance.isReady.and.returnValue(true);
         mockDashInstance.getDebug.and.returnValue(mockDashDebug);
         mockDashInstance.getMetricsFor.and.returnValue(true);
+        mockDashInstance.getDVRWindowSize.and.returnValue(101);
 
         mockDashInstance.on.and.callFake(function (eventType, handler) {
           eventHandlers[eventType] = handler;
@@ -112,7 +127,9 @@ require(
 
         var mediaSourceCallbacks = jasmine.createSpyObj('mediaSourceCallbacks', ['onSuccess', 'onError']);
         mediaSources = new MediaSources();
-        spyOn(mediaSources, 'time');
+        mediaSourcesTimeSpy = spyOn(mediaSources, 'time');
+        mediaSourcesTimeSpy.and.callThrough();
+        spyOn(mediaSources, 'failover').and.callThrough();
         mediaSources.init(cdnArray, new Date(), WindowTypes.STATIC, LiveSupport.SEEKABLE, mediaSourceCallbacks);
 
         testManifestObject = {
@@ -127,7 +144,8 @@ require(
         injector.mock({
           'dashjs': mockDashjs,
           'bigscreenplayer/plugins': mockPlugins,
-          'bigscreenplayer/dynamicwindowutils': mockDynamicWindowUtils
+          'bigscreenplayer/dynamicwindowutils': mockDynamicWindowUtils,
+          'bigscreenplayer/utils/timeutils': timeUtilsMock
         });
 
         injector.require(['bigscreenplayer/playbackstrategy/msestrategy'], function (SquiredMSEStrategy) {
@@ -149,6 +167,8 @@ require(
         document.body.removeChild(playbackElement);
         mockPluginsInterface.onErrorHandled.calls.reset();
         mockDashInstance.attachSource.calls.reset();
+        mockDashInstance.seek.calls.reset();
+        timeUtilsMock.calculateSlidingWindowSeekOffset.calls.reset();
       });
 
       function setUpMSE (timeCorrection, windowType, mediaKind, windowStartTimeMS, windowEndTimeMS) {
@@ -432,7 +452,7 @@ require(
 
           dashEventCallback(dashjsMediaPlayerEvents.ERROR, testError);
 
-          expect(mockErrorCallback).toHaveBeenCalledWith(jasmine.objectContaining(testError));
+          expect(mockErrorCallback).toHaveBeenCalled();
         });
 
         it('should call mediaSources failover on dash baseUrl changed event', function () {
@@ -684,7 +704,7 @@ require(
           it('should set current time on the video element', function () {
             mseStrategy.setCurrentTime(12);
 
-            expect(mockVideoElement.currentTime).toBe(12);
+            expect(mockDashInstance.seek).toHaveBeenCalledWith(12);
           });
 
           it('should always clamp the seek to the start of the seekable range', function () {
@@ -696,7 +716,7 @@ require(
           it('should always clamp the seek to 1.1s before the end of the seekable range', function () {
             mseStrategy.setCurrentTime(101);
 
-            expect(mockVideoElement.currentTime).toBe(99.9);
+            expect(mockDashInstance.seek).toHaveBeenCalledWith(99.9);
           });
 
           it('should start autoresume timeout when paused', function () {
@@ -715,6 +735,45 @@ require(
             mseStrategy.pause(opts);
 
             expect(mockDynamicWindowUtils.autoResumeAtStartOfRange).not.toHaveBeenCalled();
+          });
+
+          it('It should calculate seek offset time when paused before seeking', function () {
+            mseStrategy.pause();
+            mseStrategy.setCurrentTime(101);
+
+            expect(timeUtilsMock.calculateSlidingWindowSeekOffset).toHaveBeenCalledTimes(1);
+          });
+        });
+
+        describe('growing window', function () {
+          beforeEach(function () {
+            setUpMSE(0, WindowTypes.GROWING);
+            mseStrategy.load(null, 0);
+            mockVideoElement.currentTime = 50;
+          });
+
+          it('should perform a seek without refreshing the manifest if seek time is less than current time', function () {
+            mseStrategy.setCurrentTime(40);
+
+            expect(mockRefresher.GrowingWindowRefresher).not.toHaveBeenCalled();
+
+            expect(mockDashInstance.seek).toHaveBeenCalledWith(40);
+          });
+
+          it('should call seek on media player with the original user requested seek time when manifest refreshes but doesnt have a duration', function () {
+            mseStrategy.setCurrentTime(60);
+
+            dashEventCallback(dashjsMediaPlayerEvents.MANIFEST_LOADED, {data: {}});
+
+            expect(mockDashInstance.seek).toHaveBeenCalledWith(60);
+          });
+
+          it('should call seek on media player with the time clamped to new end when manifest refreshes and contains a duration', function () {
+            mseStrategy.setCurrentTime(90);
+
+            dashEventCallback(dashjsMediaPlayerEvents.MANIFEST_LOADED, {data: {mediaPresentationDuration: 80}});
+
+            expect(mockDashInstance.seek).toHaveBeenCalledWith(78.9);
           });
         });
       });
@@ -815,7 +874,7 @@ require(
           expect(mockPluginsInterface.onErrorHandled).not.toHaveBeenCalledWith();
         });
 
-        it('should not fire CDN failover event on content download error', function () {
+        it('should not publish error event on content download error', function () {
           var mockEvent = {
             error: 'download',
             event: {
@@ -828,7 +887,6 @@ require(
           var mockErrorCallback = jasmine.createSpy();
           mseStrategy.addErrorCallback(null, mockErrorCallback);
 
-          cdnArray.push({ url: 'http://testcdn2/test/', cdn: 'cdn2' });
           mseStrategy.load(null, 0);
 
           dashEventCallback(dashjsMediaPlayerEvents.ERROR, mockEvent);
@@ -836,7 +894,7 @@ require(
           expect(mockErrorCallback).not.toHaveBeenCalledWith();
         });
 
-        it('should fire CDN failover event on manifest download error', function () {
+        it('should not publish error event on manifest download error', function () {
           var mockEvent = {
             error: 'download',
             event: {
@@ -849,12 +907,61 @@ require(
           var mockErrorCallback = jasmine.createSpy();
           mseStrategy.addErrorCallback(null, mockErrorCallback);
 
-          cdnArray.push({ url: 'http://testcdn2/test/', cdn: 'cdn2' });
           mseStrategy.load(null, 0);
 
           dashEventCallback(dashjsMediaPlayerEvents.ERROR, mockEvent);
 
-          expect(mockErrorCallback).toHaveBeenCalledWith(jasmine.objectContaining(mockEvent));
+          expect(mockErrorCallback).not.toHaveBeenCalled();
+        });
+
+        it('should initiate a failover with correct parameters on manifest download error', function () {
+          var mockEvent = {
+            error: 'download',
+            event: {
+              id: 'manifest'
+            }
+          };
+
+          setUpMSE();
+
+          mseStrategy.load(null, 0);
+          mockVideoElement.currentTime = 10;
+
+          dashEventCallback(dashjsMediaPlayerEvents.ERROR, mockEvent);
+
+          var failoverParams = {
+            errorMessage: 'manifest-refresh',
+            isBufferingTimeoutError: false,
+            currentTime: mseStrategy.getCurrentTime(),
+            duration: mseStrategy.getDuration()
+          };
+
+          expect(mediaSources.failover).toHaveBeenCalledWith(mseStrategy.load, jasmine.any(Function), failoverParams);
+        });
+
+        it('should publish an error event on manifest download error but there are no more sources to CDN failover to', function () {
+          var mockEvent = {
+            error: 'download',
+            event: {
+              id: 'manifest'
+            }
+          };
+
+          var noop = function () {};
+          mediaSources.failover(noop, noop, { errorMessage: 'failover', isBufferingTimeoutError: false });
+          mediaSources.failover(noop, noop, { errorMessage: 'failover', isBufferingTimeoutError: false });
+
+          setUpMSE();
+
+          var mockErrorCallback = jasmine.createSpy();
+          mseStrategy.addErrorCallback(null, mockErrorCallback);
+
+          mseStrategy.load(null, 0);
+          mockVideoElement.currentTime = 10;
+
+          dashEventCallback(dashjsMediaPlayerEvents.ERROR, mockEvent);
+
+          expect(mockErrorCallback).toHaveBeenCalled();
         });
       });
     });

@@ -8,12 +8,15 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
     'bigscreenplayer/manifest/manifestmodifier',
     'bigscreenplayer/models/livesupport',
     'bigscreenplayer/dynamicwindowutils',
+    'bigscreenplayer/playbackstrategy/growingwindowrefresher',
+    'bigscreenplayer/utils/timeutils',
 
     // static imports
     'dashjs'
   ],
-  function (MediaState, WindowTypes, DebugTool, MediaKinds, Plugins, ManifestModifier, LiveSupport, DynamicWindowUtils) {
+  function (MediaState, WindowTypes, DebugTool, MediaKinds, Plugins, ManifestModifier, LiveSupport, DynamicWindowUtils, GrowingWindowRefresher, TimeUtils) {
     var MSEStrategy = function (mediaSources, windowType, mediaKind, playbackElement, isUHD, device) {
+      var LIVE_DELAY_SECONDS = 1.1;
       var mediaPlayer;
       var mediaElement;
 
@@ -23,6 +26,8 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
 
       var timeCorrection = mediaSources.time() && mediaSources.time().correction || 0;
       var failoverTime;
+      var refreshFailoverTime;
+      var slidingWindowPausedTime = 0;
       var isEnded = false;
 
       var bitrateInfoList;
@@ -101,8 +106,6 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
           delete event.error.data;
         }
 
-        event.errorProperties = { error_mssg: event.error };
-
         if (event.error) {
           if (event.error.message) {
             DebugTool.info('MSE Error: ' + event.error.message);
@@ -119,9 +122,28 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
             if (event.error === DashJSEvents.DOWNLOAD_ERROR_MESSAGE && event.event.id === 'content') {
               return;
             }
+            if (event.error === DashJSEvents.DOWNLOAD_ERROR_MESSAGE && event.event.id === 'manifest') {
+              manifestDownloadError(event);
+              return;
+            }
           }
         }
-        publishError(event);
+        publishError();
+      }
+
+      function manifestDownloadError (event) {
+        var error = function () {
+          publishError();
+        };
+
+        var failoverParams = {
+          errorMessage: 'manifest-refresh',
+          isBufferingTimeoutError: false,
+          currentTime: getCurrentTime(),
+          duration: getDuration()
+        };
+
+        mediaSources.failover(load, error, failoverParams);
       }
 
       function onManifestLoaded (event) {
@@ -218,9 +240,9 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         }
       }
 
-      function publishError (errorEvent) {
+      function publishError () {
         if (errorCallback) {
-          errorCallback(errorEvent);
+          errorCallback();
         }
       }
 
@@ -229,7 +251,18 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
       }
 
       function getClampedTime (time, range) {
-        return Math.min(Math.max(time, range.start), range.end - 1.1);
+        return Math.min(Math.max(time, range.start), range.end - LIVE_DELAY_SECONDS);
+      }
+
+      function load (mimeType, playbackTime) {
+        if (!mediaPlayer) {
+          failoverTime = playbackTime;
+          setUpMediaElement(playbackElement);
+          setUpMediaPlayer(playbackTime);
+          setUpMediaListeners();
+        } else {
+          modifySource(refreshFailoverTime || failoverTime);
+        }
       }
 
       function setUpMediaElement (playbackElement) {
@@ -248,6 +281,7 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
       function setUpMediaPlayer (playbackTime) {
         mediaPlayer = dashjs.MediaPlayer().create();
         mediaPlayer.getDebug().setLogToBrowserConsole(false);
+        mediaPlayer.setLiveDelay(LIVE_DELAY_SECONDS);
 
         mediaPlayer.setBufferToKeep(0);
         mediaPlayer.setBufferAheadToKeep(20);
@@ -338,6 +372,33 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         return (mediaElement) ? mediaElement.currentTime - timeCorrection : 0;
       }
 
+      function refreshManifestBeforeSeek (seekToTime) {
+        refreshFailoverTime = seekToTime;
+        GrowingWindowRefresher(mediaPlayer, function (mediaPresentationDuration) {
+          if (!isNaN(mediaPresentationDuration)) {
+            DebugTool.info('Stream ended. Clamping seek point to end of stream');
+            mediaPlayer.seek(getClampedTime(seekToTime, {start: getSeekableRange().start, end: mediaPresentationDuration}));
+          } else {
+            mediaPlayer.seek(seekToTime);
+          }
+        });
+      }
+
+      function calculateSeekOffset (time) {
+        function getClampedTimeForLive (time) {
+          return Math.min(Math.max(time, 0), mediaPlayer.getDVRWindowSize() - LIVE_DELAY_SECONDS);
+        }
+
+        if (windowType === WindowTypes.SLIDING) {
+          var dvrInfo = mediaPlayer.getDashMetrics().getCurrentDVRInfo(mediaPlayer.getMetricsFor(mediaKind));
+          var offset = TimeUtils.calculateSlidingWindowSeekOffset(time, dvrInfo.range.start, timeCorrection, slidingWindowPausedTime);
+          slidingWindowPausedTime = 0;
+
+          return getClampedTimeForLive(offset);
+        }
+        return getClampedTime(time, getSeekableRange());
+      }
+
       return {
         transitions: {
           canBePaused: function () { return true; },
@@ -365,16 +426,7 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
             newTimeUpdateCallback.call(thisArg);
           };
         },
-        load: function (mimeType, playbackTime) {
-          if (!mediaPlayer) {
-            failoverTime = playbackTime;
-            setUpMediaElement(playbackElement);
-            setUpMediaPlayer(playbackTime);
-            setUpMediaListeners();
-          } else {
-            modifySource(failoverTime);
-          }
-        },
+        load: load,
         getSeekableRange: getSeekableRange,
         getCurrentTime: getCurrentTime,
         getDuration: getDuration,
@@ -426,6 +478,10 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         },
         isPaused: isPaused,
         pause: function (opts) {
+          if (windowType === WindowTypes.SLIDING) {
+            slidingWindowPausedTime = Date.now();
+          }
+
           mediaPlayer.pause();
           opts = opts || {};
           if (opts.disableAutoResume !== true && windowType === WindowTypes.SLIDING) {
@@ -445,10 +501,11 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         },
         setCurrentTime: function (time) {
           var seekToTime = getClampedTime(time, getSeekableRange());
-          if (windowType === WindowTypes.SLIDING) {
-            mediaElement.currentTime = (seekToTime + timeCorrection);
+          if (windowType === WindowTypes.GROWING && seekToTime > getCurrentTime()) {
+            refreshManifestBeforeSeek(seekToTime);
           } else {
-            mediaPlayer.seek(seekToTime);
+            var seekTime = calculateSeekOffset(time);
+            mediaPlayer.seek(seekTime);
           }
         }
       };
