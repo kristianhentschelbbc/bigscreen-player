@@ -18,6 +18,7 @@ define('bigscreenplayer/bigscreenplayer',
     function BigscreenPlayer () {
       var stateChangeCallbacks = [];
       var timeUpdateCallbacks = [];
+      var playerReadyCallback;
 
       var mediaKind;
       var initialPlaybackTimeEpoch;
@@ -61,6 +62,10 @@ define('bigscreenplayer/bigscreenplayer',
             isSeeking = false;
           }
 
+          if (evt.data.state === MediaState.LOADED) {
+            playerReadyCallback();
+          }
+
           stateObject.endOfStream = endOfStream;
 
           stateChangeCallbacks.forEach(function (callback) {
@@ -91,7 +96,7 @@ define('bigscreenplayer/bigscreenplayer',
         return getWindowStartTime() ? getWindowStartTime() + (seconds * 1000) : undefined;
       }
 
-      function bigscreenPlayerDataLoaded (playbackElement, bigscreenPlayerData, enableSubtitles, device, successCallback) {
+      function bigscreenPlayerDataLoaded (playbackElement, bigscreenPlayerData, enableSubtitles, device) {
         if (windowType !== WindowTypes.STATIC) {
           bigscreenPlayerData.time = mediaSources.time();
           serverDate = bigscreenPlayerData.serverDate;
@@ -113,10 +118,6 @@ define('bigscreenplayer/bigscreenplayer',
           mediaStateUpdateCallback,
           device
         );
-
-        if (successCallback) {
-          successCallback();
-        }
       }
 
       function getWindowStartTime () {
@@ -145,9 +146,11 @@ define('bigscreenplayer/bigscreenplayer',
             callbacks = {};
           }
 
+          playerReadyCallback = callbacks.onSuccess;
+
           var mediaSourceCallbacks = {
             onSuccess: function () {
-              bigscreenPlayerDataLoaded(playbackElement, bigscreenPlayerData, enableSubtitles, device, callbacks.onSuccess);
+              bigscreenPlayerDataLoaded(playbackElement, bigscreenPlayerData, enableSubtitles, device);
             },
             onError: function (error) {
               if (callbacks.onError) {

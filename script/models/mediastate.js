@@ -10,6 +10,7 @@ define(
      * Enumeration of possible media states.
      */
     var MediaState = {
+      LOADED: 'loaded',
       /** Media is stopped and is not attempting to start. */
       STOPPED: 0,
       /** Media is paused. */

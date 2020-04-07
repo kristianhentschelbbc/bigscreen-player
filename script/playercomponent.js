@@ -176,7 +176,14 @@ define(
           case MediaState.ENDED:
             onEnded();
             break;
+          case MediaState.LOADED:
+            onLoadedData();
+            break;
         }
+      }
+
+      function onLoadedData () {
+        publishMediaStateUpdate(MediaState.LOADED);
       }
 
       function onPlaying () {

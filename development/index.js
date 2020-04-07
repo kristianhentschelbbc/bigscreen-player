@@ -1,9 +1,10 @@
 require (['bigscreenplayer/bigscreenplayer'], function(BigscreenPlayer){  
   let playbackElement = document.createElement('div')
-  let windowType = 'staticWindow';
+  let windowType = 'slidingWindow';
   let enableSubtitles = false;
   
   let minimalData = {
+      serverDate: new Date(),
       media: {
         type: 'application/dash+xml',
         mimeType: 'video/mp4',
@@ -12,7 +13,7 @@ require (['bigscreenplayer/bigscreenplayer'], function(BigscreenPlayer){
           {
             // Content from DASH IF testing assests (used in their reference player)
             // https://reference.dashif.org/dash.js/v2.9.2/samples/dash-if-reference-player/index.htm
-            url: 'https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd',
+            url: 'LIVE_DASH_URL',
             cdn: 'dash.akamaized.net'
           }
         ]
@@ -33,6 +34,7 @@ require (['bigscreenplayer/bigscreenplayer'], function(BigscreenPlayer){
     {
       onSuccess: function () {
         bigscreenPlayer.toggleDebug();
+        console.log(bigscreenPlayer.getCurrentTime());
       },
       onError: function () {
         bigscreenPlayer.toggleDebug();

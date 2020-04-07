@@ -52,7 +52,8 @@ define('bigscreenplayer/playbackstrategy/legacyplayeradapter',
           'seek-finished': onSeekFinished,
           'status': onTimeUpdate,
           'complete': onEnded,
-          'error': onError
+          'error': onError,
+          'loaded': onLoadedData
         };
 
         if (handleEvent.hasOwnProperty(event.type)) {
@@ -103,6 +104,10 @@ define('bigscreenplayer/playbackstrategy/legacyplayeradapter',
         if ((handleErrorOnExitingSeek || delayPauseOnExitSeek) && exitingSeek) {
           checkSeekSucceeded(event.seekableRange.start, event.currentTime);
         }
+      }
+
+      function onLoadedData () {
+        publishMediaState(MediaState.LOADED);
       }
 
       function onEnded () {

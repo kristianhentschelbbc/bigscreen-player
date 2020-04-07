@@ -60,6 +60,10 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
         STREAM_INITIALIZED: 'streamInitialized'
       };
 
+      function onLoadedData () {
+        publishMediaState(MediaState.LOADED);
+      }
+
       function onPlaying () {
         isEnded = false;
         publishMediaState(MediaState.PLAYING);
@@ -337,6 +341,7 @@ define('bigscreenplayer/playbackstrategy/msestrategy',
 
       function setUpMediaListeners () {
         mediaElement.addEventListener('timeupdate', onTimeUpdate);
+        mediaElement.addEventListener('loadeddata', onLoadedData);
         mediaElement.addEventListener('playing', onPlaying);
         mediaElement.addEventListener('pause', onPaused);
         mediaElement.addEventListener('waiting', onBuffering);

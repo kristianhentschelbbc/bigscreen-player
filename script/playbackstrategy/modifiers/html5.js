@@ -394,6 +394,10 @@ define(
         toComplete();
       }
 
+      function onData () {
+        emitEvent('loaded');
+      }
+
       function emitSeekAttempted () {
         if (getState() === MediaPlayerBase.STATE.EMPTY) {
           emitEvent(MediaPlayerBase.EVENT.SEEK_ATTEMPTED);
@@ -665,6 +669,7 @@ define(
             mediaElement.addEventListener('waiting', onDeviceBuffering, false);
             mediaElement.addEventListener('timeupdate', onStatus, false);
             mediaElement.addEventListener('loadedmetadata', onMetadata, false);
+            mediaElement.addEventListener('loadeddata', onData, false);
             mediaElement.addEventListener('pause', onPause, false);
 
             prependChildElement(sourceContainer, mediaElement);
