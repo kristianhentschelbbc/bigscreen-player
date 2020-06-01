@@ -206,9 +206,9 @@ define(
         publishMediaStateUpdate(undefined, { timeUpdate: true });
       }
 
-      function onError () {
+      function onError (event) {
         bubbleBufferingCleared();
-        raiseError();
+        raiseError(event);
       }
 
       function startBufferingErrorTimeout () {
@@ -216,34 +216,34 @@ define(
         clearBufferingErrorTimeout();
         errorTimeoutID = setTimeout(function () {
           bubbleBufferingCleared();
-          attemptCdnFailover(true);
+          attemptCdnFailover({isBufferingTimeoutError: true});
         }, bufferingTimeout);
       }
 
-      function raiseError () {
+      function raiseError (event) {
         clearBufferingErrorTimeout();
         publishMediaStateUpdate(MediaState.WAITING);
         bubbleErrorRaised();
-        startFatalErrorTimeout();
+        startFatalErrorTimeout(event);
       }
 
-      function startFatalErrorTimeout () {
+      function startFatalErrorTimeout (event) {
         if (!fatalErrorTimeout && !fatalError) {
           fatalErrorTimeout = setTimeout(function () {
             fatalErrorTimeout = null;
             fatalError = true;
-            attemptCdnFailover(false);
+            attemptCdnFailover({error: event, isBufferingTimeoutError: false});
           }, 5000);
         }
       }
 
-      function attemptCdnFailover (bufferingTimeoutError) {
+      function attemptCdnFailover (errorContext) {
         var time = getCurrentTime();
         var oldWindowStartTime = getWindowStartTime();
 
         var failoverParams = {
-          errorMessage: bufferingTimeoutError ? 'bufferingTimeoutError' : 'fatalError',
-          isBufferingTimeoutError: bufferingTimeoutError,
+          errorMessage: errorContext.bufferingTimeoutError ? 'bufferingTimeoutError' : 'fatalError',
+          isBufferingTimeoutError: errorContext.bufferingTimeoutError,
           currentTime: getCurrentTime(),
           duration: getDuration()
         };
@@ -257,7 +257,7 @@ define(
         };
 
         var doErrorCallback = function () {
-          bubbleFatalError(bufferingTimeoutError);
+          bubbleFatalError(errorContext);
         };
 
         mediaSources.failover(doLoadMedia, doErrorCallback, failoverParams);
@@ -305,10 +305,10 @@ define(
         Plugins.interface.onBufferingCleared(evt);
       }
 
-      function bubbleFatalError (bufferingTimeoutError) {
-        var evt = new PluginData({ status: PluginEnums.STATUS.FATAL, stateType: PluginEnums.TYPE.ERROR, isBufferingTimeoutError: bufferingTimeoutError });
+      function bubbleFatalError (errorContext) {
+        var evt = new PluginData({ status: PluginEnums.STATUS.FATAL, stateType: PluginEnums.TYPE.ERROR, isBufferingTimeoutError: errorContext.bufferingTimeoutError });
         Plugins.interface.onFatalError(evt);
-        publishMediaStateUpdate(MediaState.FATAL_ERROR, { isBufferingTimeoutError: bufferingTimeoutError });
+        publishMediaStateUpdate(MediaState.FATAL_ERROR, { code: errorContext.code, message: errorContext.message, isBufferingTimeoutError: errorContext.bufferingTimeoutError });
       }
 
       function publishMediaStateUpdate (state, opts) {
@@ -322,7 +322,7 @@ define(
         mediaData.state = state;
         mediaData.duration = getDuration();
 
-        stateUpdateCallback({ data: mediaData, timeUpdate: opts && opts.timeUpdate, isBufferingTimeoutError: (opts && opts.isBufferingTimeoutError || false) });
+        stateUpdateCallback({ data: mediaData, timeUpdate: opts && opts.timeUpdate, code: opts && opts.code, message: opts && opts.message, isBufferingTimeoutError: (opts && opts.isBufferingTimeoutError || false) });
       }
 
       function initialMediaPlay (media, startTime) {

@@ -298,8 +298,9 @@ define(
         }, 1100);
       }
 
-      function reportError (errorMessage) {
-        emitEvent(MediaPlayerBase.EVENT.ERROR);
+      function reportError (message) {
+        var errorMessage = message + ' element detail: ' + mediaElement.error.message.error;
+        emitEvent(MediaPlayerBase.EVENT.ERROR, {code: mediaElement.error.code, message: errorMessage});
       }
 
       function toBuffering () {
