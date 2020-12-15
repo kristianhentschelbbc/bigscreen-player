@@ -8,7 +8,7 @@ import LiveSupport from "../models/livesupport";
 import DynamicWindowUtils from "../dynamicwindowutils";
 import TimeUtils from "../utils/timeutils";
 import DOMHelpers from "../domhelpers";
-import "dashjs";
+import { MediaPlayer } from "dashjs";
 var MSEStrategy = function (mediaSources, windowType, mediaKind, playbackElement, isUHD) {
   var LIVE_DELAY_SECONDS = 1.1;
   var mediaPlayer;
@@ -153,7 +153,7 @@ var MSEStrategy = function (mediaSources, windowType, mediaKind, playbackElement
 
     if (event.data) {
       var manifest = event.data;
-      var representationOptions = window.bigscreenPlayer.representationOptions || {};
+      var representationOptions = {};
 
       ManifestModifier.filter(manifest, representationOptions);
       ManifestModifier.generateBaseUrls(manifest, mediaSources.availableSources());
@@ -165,7 +165,7 @@ var MSEStrategy = function (mediaSources, windowType, mediaKind, playbackElement
   }
 
   function onStreamInitialised () {
-    var setMseDuration = window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.mseDurationOverride;
+    var setMseDuration = false;
     if (setMseDuration && (windowType === WindowTypes.SLIDING || windowType === WindowTypes.GROWING)) {
       // Workaround for no setLiveSeekableRange/clearLiveSeekableRange
       mediaPlayer.setDuration(Number.MAX_SAFE_INTEGER);
@@ -322,7 +322,7 @@ var MSEStrategy = function (mediaSources, windowType, mediaKind, playbackElement
   }
 
   function setUpMediaPlayer (playbackTime) {
-    mediaPlayer = dashjs.MediaPlayer().create();
+    mediaPlayer = MediaPlayer().create();
     mediaPlayer.updateSettings({
       'debug': {
         'logLevel': 2
