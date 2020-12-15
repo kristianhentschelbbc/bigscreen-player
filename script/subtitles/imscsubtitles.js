@@ -1,4 +1,4 @@
-import IMSC from "smp-imsc";
+import {fromXML, generateISD, renderHTML} from "smp-";
 import DOMHelpers from "../domhelpers";
 import DebugTool from "../debugger/debugtool";
 import Plugins from "../plugins";
@@ -11,7 +11,7 @@ export default function (mediaPlayer, response, autoStart, parentElement) {
   var times = [];
 
   try {
-    xml = IMSC.fromXML(response.text);
+    xml = fromXML(response.text);
     times = xml.getMediaTimeEvents();
     if (autoStart) {
       start();
@@ -56,8 +56,8 @@ export default function (mediaPlayer, response, autoStart, parentElement) {
       parentElement.appendChild(currentSubtitlesElement);
 
       try {
-        var isd = IMSC.generateISD(xml, currentTime);
-        IMSC.renderHTML(isd, currentSubtitlesElement, null, parentElement.clientHeight, parentElement.clientWidth, false, null, null, false);
+        var isd = generateISD(xml, currentTime);
+        renderHTML(isd, currentSubtitlesElement, null, parentElement.clientHeight, parentElement.clientWidth, false, null, null, false);
       } catch (e) {
         DebugTool.info('Exception while rendering subtitles: ' + e);
         Plugins.interface.onSubtitlesRenderError();
