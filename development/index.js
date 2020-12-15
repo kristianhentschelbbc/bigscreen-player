@@ -1,8 +1,8 @@
-window.bigscreenPlayer = { playbackStrategy: 'msestrategy'};
+// window.bigscreenPlayer = { playbackStrategy: 'msestrategy'};
 // Reminder - Add overrides as appropriate
 // e.g overrides: {legacySubtitles: true}
+import BigscreenPlayer from '../script/bigscreenplayer'
 
-require (['bigscreenplayer/bigscreenplayer'], function(BigscreenPlayer){  
   let playbackElement = document.createElement('div')
 
   playbackElement.style.position = 'absolute';
@@ -67,4 +67,3 @@ require (['bigscreenplayer/bigscreenplayer'], function(BigscreenPlayer){
         DebugTool.info('Initialisation failed.')
       }
   });
-})
