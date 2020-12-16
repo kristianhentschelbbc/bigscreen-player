@@ -391,7 +391,7 @@ function Player () {
 
     count = 0;
     timeoutHappened = false;
-    if (window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.restartTimeout) {
+    if (window.bigscreenPlayer && window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.restartTimeout) {
       setTimeout(function () {
         timeoutHappened = true;
       }, window.bigscreenPlayer.overrides.restartTimeout);

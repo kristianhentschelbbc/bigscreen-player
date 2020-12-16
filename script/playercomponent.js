@@ -1,6 +1,5 @@
 import MediaState from "./models/mediastate";
 import Subtitles from "./subtitles/subtitles";
-import PlaybackStrategy from "./playbackstrategy/msestrategy";
 import WindowTypes from "./models/windowtypes";
 import PluginData from "./plugindata";
 import PluginEnums from "./pluginenums";
@@ -8,6 +7,8 @@ import Plugins from "./plugins";
 import TransferFormats from "./models/transferformats";
 import LiveSupport from "./models/livesupport";
 import PlaybackStrategyModel from "./models/playbackstrategy";
+import LegacyAdapter from "./playbackstrategy/legacyplayeradapter";
+import SeekableModifier from "./playbackstrategy/modifiers/live/seekable";
 
 var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSources, windowType, enableSubtitles, callback) {
   var isInitialPlay = true;
@@ -16,27 +17,76 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
   var mediaKind = bigscreenPlayerData.media.kind;
   var stateUpdateCallback = callback;
   var playbackStrategy;
+  var subtitles;
   var mediaMetaData;
   var fatalErrorTimeout;
   var fatalError;
   var transferFormat = bigscreenPlayerData.media.transferFormat;
 
-  playbackStrategy = PlaybackStrategy(
-    mediaSources,
-    windowType,
-    mediaKind,
-    playbackElement,
-    bigscreenPlayerData.media.isUHD
-  );
+  var liveSupport = window.bigscreenPlayer && window.bigscreenPlayer.liveSupport || 'seekable';
 
-  playbackStrategy.addEventCallback(this, eventCallback);
-  playbackStrategy.addErrorCallback(this, onError);
-  playbackStrategy.addTimeUpdateCallback(this, onTimeUpdate);
 
-  bubbleErrorCleared();
+  switch (window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer) {
+    case 'cehtml':
+      import('./playbackstrategy/modifiers/cehtml').then((CEHTML) => {
+        init(generateLegacyMediaPlayer(CEHTML.default, liveSupport));
+      })
+      break;
+    case 'samsungstreaming':
+      import('./playbackstrategy/modifiers/samsungstreaming').then((SamsungStreaming) => {
+        init(generateLegacyMediaPlayer(SamsungStreaming.default, liveSupport));
+      })
+      break;
+    case 'samsungstreaming2015':
+      import('./playbackstrategy/modifiers/samsungstreaming2015').then((SamsungStreaming2015) => {
+        init(generateLegacyMediaPlayer(SamsungStreaming2015.default, liveSupport));
+      })
+      break;
+    case 'samsungmaple':
+      import('./playbackstrategy/modifiers/samsungmaple').then((SamsungMaple) => {
+        init(generateLegacyMediaPlayer(SamsungMaple.default, liveSupport));
+      })
+      break;
+    case 'html5':
+      import('./playbackstrategy/modifiers/html5').then((HTML5) => {
+        init(generateLegacyMediaPlayer(HTML5.default, liveSupport));
+      })
+      break;
+    default:
+      import("./playbackstrategy/msestrategy").then((MSEStrategy) => {
+        var strategy  = MSEStrategy.default(
+          mediaSources,
+          windowType,
+          mediaKind,
+          playbackElement,
+          bigscreenPlayerData.media.isUHD
+        );
+        init(strategy);
+      })
+  }
 
-  var subtitles = Subtitles(playbackStrategy, captionsURL, enableSubtitles, playbackElement);
-  initialMediaPlay(bigscreenPlayerData.media, bigscreenPlayerData.initialPlaybackTime);
+  function generateLegacyMediaPlayer(mediaPlayer, liveSupport) {
+
+    // ignore liveSupport for now, just be seekable
+    if (windowType !== WindowTypes.STATIC) {
+      mediaPlayer = SeekableModifier.default(mediaPlayer, windowType, mediaSources);
+    }
+  
+    return LegacyAdapter(mediaSources, windowType, playbackElement, bigscreenPlayerData.media.isUHD, mediaPlayer)
+  }
+
+  
+  function init(strategy) {
+    playbackStrategy = strategy;
+    playbackStrategy.addEventCallback(this, eventCallback);
+    playbackStrategy.addErrorCallback(this, onError);
+    playbackStrategy.addTimeUpdateCallback(this, onTimeUpdate);
+  
+    bubbleErrorCleared();
+  
+    subtitles = Subtitles(playbackStrategy, captionsURL, enableSubtitles, playbackElement);
+    initialMediaPlay(bigscreenPlayerData.media, bigscreenPlayerData.initialPlaybackTime);
+  }
 
   function play () {
     playbackStrategy.play();
@@ -377,7 +427,7 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
 };
 
 function getLiveSupport () {
-  return PlaybackStrategy.getLiveSupport();
+  return 'seekable';
 }
 
 PlayerComponent.getLiveSupport = getLiveSupport;

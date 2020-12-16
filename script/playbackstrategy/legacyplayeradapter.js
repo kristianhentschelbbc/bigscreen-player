@@ -29,15 +29,15 @@ export default function (mediaSources, windowType, playbackElement, isUHD, playe
 
   var liveGlitchCurtain;
 
-  var strategy = window.bigscreenPlayer && window.bigscreenPlayer.playbackStrategy;
+  // var strategy = window.bigscreenPlayer && window.bigscreenPlayer.playbackStrategy;
   var setSourceOpts = {
-    disableSentinels: !!isUHD && windowType !== WindowTypes.STATIC && window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.liveUhdDisableSentinels,
-    disableSeekSentinel: window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.disableSeekSentinel
+    disableSentinels: !!isUHD && windowType !== WindowTypes.STATIC && window.bigscreenPlayer && window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.liveUhdDisableSentinels,
+    disableSeekSentinel: window.bigscreenPlayer && window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.disableSeekSentinel
   };
 
   mediaPlayer.addEventCallback(this, eventHandler);
 
-  strategy = strategy.match(/.+(?=strategy)/g)[0];
+  // strategy = strategy.match(/.+(?=strategy)/g)[0];
 
   function eventHandler (event) {
     var handleEvent = {
@@ -162,14 +162,14 @@ export default function (mediaSources, windowType, playbackElement, isUHD, playe
     }
   }
 
-  function getStrategy () {
-    return strategy.toUpperCase();
-  }
+  // function getStrategy () {
+  //   return strategy.toUpperCase();
+  // }
 
   function setupExitSeekWorkarounds (mimeType) {
     handleErrorOnExitingSeek = windowType !== WindowTypes.STATIC && mimeType === 'application/dash+xml';
 
-    var deviceFailsPlayAfterPauseOnExitSeek = window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.pauseOnExitSeek;
+    var deviceFailsPlayAfterPauseOnExitSeek = window.bigscreenPlayer && window.bigscreenPlayer.overrides && window.bigscreenPlayer.overrides.pauseOnExitSeek;
     delayPauseOnExitSeek = handleErrorOnExitingSeek || deviceFailsPlayAfterPauseOnExitSeek;
   }
 
@@ -205,7 +205,7 @@ export default function (mediaSources, windowType, playbackElement, isUHD, playe
   }
 
   function requiresLiveCurtain () {
-    return !!window.bigscreenPlayer.overrides && !!window.bigscreenPlayer.overrides.showLiveCurtain;
+    return !! (window.bigscreenPlayer &&  window.bigscreenPlayer.overrides) && !! (window.bigscreenPlayer && window.bigscreenPlayer.overrides.showLiveCurtain);
   }
 
   function reset () {
@@ -247,7 +247,6 @@ export default function (mediaSources, windowType, playbackElement, isUHD, playe
       } else {
         mediaPlayer.beginPlayback();
       }
-      DebugTool.keyValue({key: 'strategy', value: getStrategy()});
     },
     play: function () {
       isPaused = false;
@@ -319,7 +318,6 @@ export default function (mediaSources, windowType, playbackElement, isUHD, playe
         mediaPlayer.pause();
       }
     },
-    getStrategy: getStrategy(),
     reset: reset,
     tearDown: function () {
       mediaPlayer.removeAllEventCallbacks();
