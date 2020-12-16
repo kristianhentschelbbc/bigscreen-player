@@ -24,9 +24,17 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
   var transferFormat = bigscreenPlayerData.media.transferFormat;
 
   var liveSupport = window.bigscreenPlayer && window.bigscreenPlayer.liveSupport || 'seekable';
+  var resolvedMediaPlayer = 'mse';
 
+  if (window.bigscreenPlayer && window.bigscreenPlayer.playbackStrategy === 'nativestrategy') {
+    if (window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer) {
+      resolvedMediaPlayer = window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer;
+    } else {
+      resolvedMediaPlayer = 'html5'; 
+    }
+  }
 
-  switch (window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer) {
+  switch (resolvedMediaPlayer) {
     case 'cehtml':
       import('./playbackstrategy/modifiers/cehtml').then((CEHTML) => {
         init(generateLegacyMediaPlayer(CEHTML.default, liveSupport));
@@ -52,7 +60,7 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
         init(generateLegacyMediaPlayer(HTML5.default, liveSupport));
       })
       break;
-    default:
+    case 'mse':
       import("./playbackstrategy/msestrategy").then((MSEStrategy) => {
         var strategy  = MSEStrategy.default(
           mediaSources,
