@@ -24,7 +24,7 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
   var transferFormat = bigscreenPlayerData.media.transferFormat;
 
   var liveSupport = window.bigscreenPlayer && window.bigscreenPlayer.liveSupport || 'seekable';
-  var resolvedMediaPlayer = 'html5';
+  var resolvedMediaPlayer = 'mse';
 
   if (window.bigscreenPlayer && window.bigscreenPlayer.playbackStrategy === 'nativestrategy') {
     if (window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer) {
