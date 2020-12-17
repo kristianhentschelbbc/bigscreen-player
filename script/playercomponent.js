@@ -24,7 +24,7 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
   var transferFormat = bigscreenPlayerData.media.transferFormat;
 
   var liveSupport = window.bigscreenPlayer && window.bigscreenPlayer.liveSupport || 'seekable';
-  var resolvedMediaPlayer = 'mse';
+  var resolvedMediaPlayer = 'html5';
 
   if (window.bigscreenPlayer && window.bigscreenPlayer.playbackStrategy === 'nativestrategy') {
     if (window.bigscreenPlayer && window.bigscreenPlayer.mediaPlayer) {
@@ -77,7 +77,7 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
 
     // ignore liveSupport for now, just be seekable
     if (windowType !== WindowTypes.STATIC) {
-      mediaPlayer = SeekableModifier.default(mediaPlayer, windowType, mediaSources);
+      mediaPlayer = SeekableModifier(mediaPlayer, windowType, mediaSources);
     }
   
     return LegacyAdapter(mediaSources, windowType, playbackElement, bigscreenPlayerData.media.isUHD, mediaPlayer)
