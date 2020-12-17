@@ -37,27 +37,27 @@ var PlayerComponent = function (playbackElement, bigscreenPlayerData, mediaSourc
   switch (resolvedMediaPlayer) {
     case 'cehtml':
       import('./playbackstrategy/modifiers/cehtml').then((CEHTML) => {
-        init(generateLegacyMediaPlayer(CEHTML.default, liveSupport));
+        init(generateLegacyMediaPlayer(CEHTML.default(), liveSupport));
       })
       break;
     case 'samsungstreaming':
       import('./playbackstrategy/modifiers/samsungstreaming').then((SamsungStreaming) => {
-        init(generateLegacyMediaPlayer(SamsungStreaming.default, liveSupport));
+        init(generateLegacyMediaPlayer(SamsungStreaming.default(), liveSupport));
       })
       break;
     case 'samsungstreaming2015':
       import('./playbackstrategy/modifiers/samsungstreaming2015').then((SamsungStreaming2015) => {
-        init(generateLegacyMediaPlayer(SamsungStreaming2015.default, liveSupport));
+        init(generateLegacyMediaPlayer(SamsungStreaming2015.default(), liveSupport));
       })
       break;
     case 'samsungmaple':
       import('./playbackstrategy/modifiers/samsungmaple').then((SamsungMaple) => {
-        init(generateLegacyMediaPlayer(SamsungMaple.default, liveSupport));
+        init(generateLegacyMediaPlayer(SamsungMaple.default(), liveSupport));
       })
       break;
     case 'html5':
       import('./playbackstrategy/modifiers/html5').then((HTML5) => {
-        init(generateLegacyMediaPlayer(HTML5.default, liveSupport));
+        init(generateLegacyMediaPlayer(HTML5.default(), liveSupport));
       })
       break;
     case 'mse':
