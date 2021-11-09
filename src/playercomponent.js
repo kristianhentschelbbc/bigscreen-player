@@ -331,6 +331,18 @@ function PlayerComponent (playbackElement, bigscreenPlayerData, mediaSources, wi
     fatalError = undefined
   }
 
+  function setAudioTrack (index) {
+    playbackStrategy && playbackStrategy.setAudioTrack(index)
+  }
+
+  function getAudioTrackIds () {
+    if (playbackStrategy && playbackStrategy.getAudioTrackIds) {
+      return playbackStrategy.getAudioTrackIds()
+    } else {
+      return []
+    }
+  }
+
   return {
     play: play,
     pause: pause,
@@ -346,7 +358,9 @@ function PlayerComponent (playbackElement, bigscreenPlayerData, mediaSources, wi
     getSeekableRange: getSeekableRange,
     getPlayerElement: getPlayerElement,
     isPaused: isPaused,
-    tearDown: tearDown
+    tearDown: tearDown,
+    setAudioTrack: setAudioTrack,
+    getAudioTrackIds: getAudioTrackIds
   }
 }
 

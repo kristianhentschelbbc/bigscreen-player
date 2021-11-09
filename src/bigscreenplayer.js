@@ -404,7 +404,9 @@ function BigscreenPlayer () {
     toggleDebug: toggleDebug,
     getLogLevels: () => DebugTool.logLevels,
     setLogLevel: DebugTool.setLogLevel,
-    getDebugLogs: () => Chronicle.retrieve()
+    getDebugLogs: () => Chronicle.retrieve(),
+    setAudioTrack: (index) => playerComponent && playerComponent.setAudioTrack(index),
+    getAudioTrackIds: () => playerComponent && playerComponent.getAudioTrackIds()
   }
 }
 
