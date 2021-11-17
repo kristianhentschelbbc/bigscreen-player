@@ -187,10 +187,8 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
       playerMetadata.videoBitrate = currentPlaybackBitrate(MediaKinds.VIDEO)
       playerMetadata.playbackBitrate = playerMetadata.videoBitrate + playerMetadata.audioBitrate
     } else {
-      playerMetadata.playbackBitrate = playerMetadata.audioBitrate 
+      playerMetadata.playbackBitrate = playerMetadata.audioBitrate
     }
-
-
 
     DebugTool.keyValue({ key: 'playback bitrate', value: playerMetadata.playbackBitrate + ' kbps' })
 
