@@ -33,6 +33,8 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
   let isSeeking = false
 
   let playerMetadata = {
+    videoBitrate: undefined,
+    audioBitrate: undefined,
     playbackBitrate: undefined,
     bufferLength: undefined,
     fragmentInfo: {
@@ -179,11 +181,16 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
   }
 
   function emitPlayerInfo () {
+    playerMetadata.audioBitrate = currentPlaybackBitrate(MediaKinds.AUDIO)
+
     if (mediaKind === MediaKinds.VIDEO) {
-      playerMetadata.playbackBitrate = currentPlaybackBitrate(MediaKinds.VIDEO) + currentPlaybackBitrate(MediaKinds.AUDIO)
+      playerMetadata.videoBitrate = currentPlaybackBitrate(MediaKinds.VIDEO)
+      playerMetadata.playbackBitrate = playerMetadata.videoBitrate + playerMetadata.audioBitrate
     } else {
-      playerMetadata.playbackBitrate = currentPlaybackBitrate(MediaKinds.AUDIO)
+      playerMetadata.playbackBitrate = playerMetadata.audioBitrate 
     }
+
+
 
     DebugTool.keyValue({ key: 'playback bitrate', value: playerMetadata.playbackBitrate + ' kbps' })
 
@@ -215,17 +222,32 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
     function logBitrate (mediaKind, event) {
       const oldBitrate = isNaN(event.oldQuality) ? '--' : playbackBitrateForRepresentationIndex(event.oldQuality, mediaKind)
       const oldRepresentation = isNaN(event.oldQuality) ? 'Start' : event.oldQuality + ' (' + oldBitrate + ' kbps)'
-      const newRepresentation = event.newQuality + ' (' + playbackBitrateForRepresentationIndex(event.newQuality, mediaKind) + ' kbps)'
+      const newRepresentation = playbackBitrateForRepresentationIndex(event.newQuality, mediaKind)
+      const newRepresentationString = event.newQuality + ' (' + newRepresentation + ' kbps)'
 
-      DebugTool.keyValue({ key: event.mediaType + ' Representation', value: newRepresentation })
-      DebugTool.info(mediaKind + ' ABR Change Rendered From Representation ' + oldRepresentation + ' To ' + newRepresentation)
+      if (mediaKind === MediaKinds.VIDEO) {
+        playerMetadata.videoBitrate = playbackBitrateForRepresentationIndex(event.newQuality, MediaKinds.VIDEO)
+      } else {
+        playerMetadata.audioBitrate = playbackBitrateForRepresentationIndex(event.newQuality, MediaKinds.AUDIO)
+      }
+
+      // Assuming Video + Audio for spike; TODO: Fix logic for Audio Only Streams
+      playerMetadata.playbackBitrate = playerMetadata.videoBitrate + playerMetadata.audioBitrate
+
+      DebugTool.keyValue({ key: event.mediaType + ' Representation', value: newRepresentationString })
+      DebugTool.info(mediaKind + ' ABR Change Rendered From Representation ' + oldRepresentation + ' To ' + newRepresentationString)
+
+      Plugins.interface.onPlayerInfoUpdated({
+        bufferLength: playerMetadata.bufferLength,
+        playbackBitrate: playerMetadata.playbackBitrate
+      })
     }
 
     if (event.newQuality !== undefined) {
       logBitrate(event.mediaType, event)
     }
 
-    emitPlayerInfo()
+    // emitPlayerInfo()
   }
 
   /**

@@ -51,7 +51,8 @@ describe('Media Source Extensions Playback Strategy', () => {
     QUALITY_CHANGE_RENDERED: 'qualityChangeRendered',
     BASE_URL_SELECTED: 'baseUrlSelected',
     METRIC_ADDED: 'metricAdded',
-    METRIC_CHANGED: 'metricChanged'
+    METRIC_CHANGED: 'metricChanged',
+    STREAM_INITIALIZED: 'streamInitialized'
   }
 
   let mseStrategy
@@ -920,6 +921,7 @@ describe('Media Source Extensions Playback Strategy', () => {
       mockDashInstance.getBitrateInfoListFor.mockReturnValue([{ bitrate: 1024000 }, { bitrate: 200000 }, { bitrate: 3000000 }])
       mseStrategy.load(null, 0)
 
+      dashEventCallback(dashjsMediaPlayerEvents.STREAM_INITIALIZED)
       dashEventCallback(dashjsMediaPlayerEvents.QUALITY_CHANGE_RENDERED, mockEvent)
 
       expect(Plugins.interface.onPlayerInfoUpdated).toHaveBeenCalledWith({
