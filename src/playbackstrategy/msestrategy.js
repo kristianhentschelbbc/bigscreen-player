@@ -235,9 +235,26 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
       DebugTool.keyValue({ key: event.mediaType + ' Representation', value: newRepresentationString })
       DebugTool.info(mediaKind + ' ABR Change Rendered From Representation ' + oldRepresentation + ' To ' + newRepresentationString)
 
+      let streamInfo = mediaPlayer.getActiveStream()
+      let processors = streamInfo.getProcessors()
+      let codecs = {}
+      let framerate
+      processors.forEach(function (processor) {
+        let mediaInfo = processor.getMediaInfo()
+        codecs[mediaInfo.type] = mediaInfo.codec.match(/.*codecs=\"(.*)\"/im)[1]
+      })
+
+      if (mediaKind === MediaKinds.VIDEO) {
+        let adaptation = mediaPlayer.getDashAdapter().getAdaptationForType(0, MediaKinds.VIDEO, streamInfo)
+        framerate = adaptation.Representation_asArray[event.newQuality].frameRate
+      }
+
       Plugins.interface.onPlayerInfoUpdated({
         bufferLength: playerMetadata.bufferLength,
-        playbackBitrate: playerMetadata.playbackBitrate
+        playbackBitrate: playerMetadata.playbackBitrate,
+        audioCodec: codecs.audio,
+        videoCodec: codecs.video,
+        framerate: framerate
       })
     }
 
