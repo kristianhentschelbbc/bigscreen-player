@@ -254,7 +254,9 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
         playbackBitrate: playerMetadata.playbackBitrate,
         audioCodec: codecs.audio,
         videoCodec: codecs.video,
-        framerate: framerate
+        framerate: framerate,
+        height: mediaElement.clientHeight,
+        width: mediaElement.clientWidth
       })
     }
 
