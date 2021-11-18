@@ -33,7 +33,8 @@ const mockDashInstance = {
   setDuration: jest.fn(),
   setPlaybackRate: jest.fn(),
   getPlaybackRate: jest.fn(),
-  setBlacklistExpiryTime: jest.fn()
+  setBlacklistExpiryTime: jest.fn(),
+  getActiveStream: jest.fn()
 }
 
 const mockDashMediaPlayer = {
@@ -88,7 +89,32 @@ describe('Media Source Extensions Playback Strategy', () => {
     })
 
     mockDashInstance.getDashAdapter.mockReturnValue({
-      getIndexForRepresentation: () => 0
+      getIndexForRepresentation: () => 0,
+      getAdaptationForType: () => { return { Representation_asArray: [{frameRate: 25}, {frameRate: 25}, {frameRate: 25}] } }
+    })
+
+    mockDashInstance.getActiveStream.mockReturnValue({
+      getProcessors: function () {
+        return [
+          {
+            getMediaInfo: function () {
+              return {
+                type: 'video',
+                codec: 'codecs="videothing"'
+              }
+            }
+          },
+          {
+            getMediaInfo: function () {
+              return {
+                type: 'audio',
+                codec: 'codecs="audiothing"'
+              }
+            }
+          }
+
+        ]
+      }
     })
 
     mockAudioElement = document.createElement('audio')
