@@ -48,7 +48,7 @@ var initialBuffering = false
 var liveWindowData
 var manifestError
 
-var excludedFuncs = ['getDebugLogs', 'mock', 'mockJasmine', 'unmock', 'toggleDebug', 'getLogLevels', 'setLogLevel', 'convertEpochMsToVideoTimeSeconds', 'clearSubtitleExample', 'areSubtitlesCustomisable', 'setPlaybackRate', 'getPlaybackRate']
+var excludedFuncs = ['getSelectedAudioTrack', 'setAudioTrack', 'getAudioTrackIds', 'getDebugLogs', 'mock', 'mockJasmine', 'unmock', 'toggleDebug', 'getLogLevels', 'setLogLevel', 'convertEpochMsToVideoTimeSeconds', 'clearSubtitleExample', 'areSubtitlesCustomisable', 'setPlaybackRate', 'getPlaybackRate']
 
 function startProgress (progressCause) {
   setTimeout(function () {
