@@ -578,8 +578,8 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
     },
     getAudioTrackIds: () => {
       let tracks = []
-      mediaPlayer.getTracksFor('audio').forEach(function (track) {
-        tracks.push(track.id)
+      mediaPlayer.getTracksFor('audio').forEach(function (track, i) {
+        tracks.push(`${i} (${track.id}, ${track.roles?.join(' ')})`); // TODO track.id is undefined, so using positional index for now.
       })
       return tracks
     }

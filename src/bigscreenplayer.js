@@ -127,6 +127,8 @@ function BigscreenPlayer () {
       playerErrorCallback
     )
 
+    console.log('bigScreenPlayerDataLoaded', playerComponent, this);
+
     subtitles = Subtitles(
       playerComponent,
       enableSubtitles,
@@ -405,7 +407,10 @@ function BigscreenPlayer () {
     getLogLevels: () => DebugTool.logLevels,
     setLogLevel: DebugTool.setLogLevel,
     getDebugLogs: () => Chronicle.retrieve(),
-    setAudioTrack: (index) => playerComponent && playerComponent.setAudioTrack(index),
+    setAudioTrack: (index) => {
+      DebugTool.apicall('setAudioTrack')
+      playerComponent && playerComponent.setAudioTrack(index);
+    },
     getAudioTrackIds: () => playerComponent && playerComponent.getAudioTrackIds()
   }
 }
