@@ -408,8 +408,9 @@ function BigscreenPlayer () {
     setLogLevel: DebugTool.setLogLevel,
     getDebugLogs: () => Chronicle.retrieve(),
     setAudioTrack: (index) => {
-      DebugTool.apicall('setAudioTrack')
-      playerComponent && playerComponent.setAudioTrack(index);
+      DebugTool.apicall(`setAudioTrack ${index}`)
+      console.log(`bsp/bigscreenplayer calling playerComponent.setAudioTrack(${index})`)
+      playerComponent && playerComponent.setAudioTrack(index)
     },
     getAudioTrackIds: () => playerComponent && playerComponent.getAudioTrackIds()
   }

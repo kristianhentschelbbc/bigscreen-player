@@ -574,7 +574,9 @@ function MSEStrategy (mediaSources, windowType, mediaKind, playbackElement, isUH
       return mediaPlayer.getPlaybackRate()
     },
     setAudioTrack: (index) => {
-      mediaPlayer.setCurrentTrack(mediaPlayer.getTracksFor('audio')[index])
+      const track = mediaPlayer.getTracksFor('audio')[index];
+      console.log(`bsp/msestrategy calling mediaPlayer.setCurrentTrack for index ${index}:`, track);
+      mediaPlayer.setCurrentTrack(track)
     },
     getAudioTrackIds: () => {
       let tracks = []

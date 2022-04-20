@@ -332,6 +332,7 @@ function PlayerComponent (playbackElement, bigscreenPlayerData, mediaSources, wi
   }
 
   function setAudioTrack (index) {
+    console.log(`bsp/playercomponent calling playbackStragey.setAudiotrack(${index})`);
     playbackStrategy && playbackStrategy.setAudioTrack && playbackStrategy.setAudioTrack(index)
   }
 

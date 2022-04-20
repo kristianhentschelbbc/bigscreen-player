@@ -23,6 +23,7 @@ function MediaSources () {
   let failoverSort
 
   function init (media, newServerDate, newWindowType, newLiveSupport, callbacks) {
+    console.log('bsp MediaSources.init', media);
     if (media.urls === undefined || media.urls.length === 0) {
       throw new Error('Media Sources urls are undefined')
     }
